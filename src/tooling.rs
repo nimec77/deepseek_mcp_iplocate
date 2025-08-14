@@ -2,7 +2,6 @@ use deepseek_api::request::{Function, ToolObject, ToolType};
 use schemars::schema::SchemaObject;
 use serde_json::json;
 
-/// Our single "virtual" tool the model can call. The app/bridge actually executes it.
 pub fn mcp_invoke_tool() -> anyhow::Result<ToolObject> {
     let parameters: SchemaObject = serde_json::from_value(json!({
         "type": "object",
@@ -10,11 +9,11 @@ pub fn mcp_invoke_tool() -> anyhow::Result<ToolObject> {
         "properties": {
             "server": {
                 "type": "string",
-                "description": "MCP server alias, e.g. 'iplocate'"
+                "description": "MCP server alias (always 'iplocate' here)"
             },
             "tool": {
                 "type": "string",
-                "description": "MCP tool name (e.g., 'lookup_ip_address_details')"
+                "description": "Tool name on that MCP server"
             },
             "arguments": {
                 "type": "object",
@@ -26,8 +25,7 @@ pub fn mcp_invoke_tool() -> anyhow::Result<ToolObject> {
         tool_type: ToolType::Function,
         function: Function {
             name: "mcp.invoke".to_string(),
-            description: "Invoke a tool on a specified MCP server. The client/bridge will execute it and return the result."
-                .to_string(),
+            description: "Invoke a tool on the IPLocate MCP server".to_string(),
             parameters,
         },
     })
