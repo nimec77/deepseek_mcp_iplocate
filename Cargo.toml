@@ -1,0 +1,13 @@
+[package]
+name = "deepseek_mcp_iplocate"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1"
+tokio = { version = "1.38", features = ["macros", "rt-multi-thread"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+schemars = "0.8"
+deepseek-api = "0.1"
+reqwest = { version = "0.12", features = ["json", "gzip"] }
