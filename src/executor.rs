@@ -2,49 +2,16 @@ use anyhow::{Context, Result};
 use serde_json::Value;
 use std::time::Duration;
 use rmcp::{
-    service::{RunningService, Peer},
-    RoleClient, ClientHandler, ServiceExt,
-    model::{ClientCapabilities, CallToolRequestParam, PaginatedRequestParam, InitializeRequestParam, 
-            ProtocolVersion, Implementation},
+    service::RunningService,
+    RoleClient, ServiceExt,
+    model::{CallToolRequestParam, PaginatedRequestParam, InitializeRequestParam, 
+            ProtocolVersion, Implementation, ClientCapabilities},
     transport::child_process::TokioChildProcess,
 };
 use crate::logger::Logger;
 
 pub struct McpExecutor {
-    service: RunningService<RoleClient, SimpleClientHandler>,
-}
-
-// Simple client handler implementation
-#[derive(Clone)]
-struct SimpleClientHandler {
-    peer: Option<Peer<RoleClient>>,
-}
-
-impl SimpleClientHandler {
-    fn new() -> Self {
-        Self { peer: None }
-    }
-}
-
-impl ClientHandler for SimpleClientHandler {
-    fn get_peer(&self) -> Option<Peer<RoleClient>> {
-        self.peer.clone()
-    }
-
-    fn set_peer(&mut self, peer: Peer<RoleClient>) {
-        self.peer = Some(peer);
-    }
-
-    fn get_info(&self) -> InitializeRequestParam {
-        InitializeRequestParam {
-            protocol_version: ProtocolVersion::V_2024_11_05,
-            capabilities: ClientCapabilities::builder().build(),
-            client_info: Implementation {
-                name: "deepseek_mcp_iplocate".to_string(),
-                version: "0.1.0".to_string(),
-            },
-        }
-    }
+    service: RunningService<RoleClient, InitializeRequestParam>,
 }
 
 impl McpExecutor {
@@ -57,13 +24,20 @@ impl McpExecutor {
         let mut cmd = tokio::process::Command::new("node");
         cmd.arg("dist/index.js")
            .current_dir(iplocate_dir);
-        let transport = TokioChildProcess::new(&mut cmd)
+        let transport = TokioChildProcess::new(cmd)
             .context("create TokioChildProcess")?;
         Logger::success("Child process transport created");
 
-        // Create client handler
+        // Create client handler using InitializeRequestParam which implements ClientHandler
         Logger::operation_start("Initializing MCP client handler");
-        let handler = SimpleClientHandler::new();
+        let handler = InitializeRequestParam {
+            protocol_version: ProtocolVersion::V_2024_11_05,
+            capabilities: ClientCapabilities::builder().build(),
+            client_info: Implementation {
+                name: "deepseek_mcp_iplocate".to_string(),
+                version: "0.1.0".to_string(),
+            },
+        };
         
         // Start the client service - this automatically handles initialization
         Logger::network("Starting MCP client service and establishing connection...");
@@ -84,7 +58,7 @@ impl McpExecutor {
         Logger::tool("Requesting available tools from IPLocate server...");
         
         // Try to get tools from the server with a shorter timeout
-        let params = PaginatedRequestParam::default();
+        let params = Some(PaginatedRequestParam::default());
         let timeout_duration = Duration::from_secs(5);
         
         match tokio::time::timeout(
@@ -156,39 +130,9 @@ impl McpExecutor {
         .context("timeout while executing tool on MCP server")?
         .context("failed to call tool")?;
             
-        // Convert the tool result to a JSON Value
-        let content_value = result.content.into_iter()
-            .map(|content| {
-                // Convert Content to JSON
-                // Content is an alias for Annotated<RawContent>
-                match &content.raw {
-                    rmcp::model::RawContent::Text(text) => {
-                        serde_json::json!({
-                            "type": "text",
-                            "text": text
-                        })
-                    },
-                    rmcp::model::RawContent::Image(image_content) => {
-                        serde_json::json!({
-                            "type": "image",
-                            "data": image_content.data,
-                            "mime_type": image_content.mime_type
-                        })
-                    },
-                    rmcp::model::RawContent::Resource(resource_content) => {
-                        serde_json::json!({
-                            "type": "resource",
-                            "resource": resource_content.resource
-                        })
-                    }
-                }
-            })
-            .collect::<Vec<_>>();
-            
-        let final_result = serde_json::json!({
-            "content": content_value,
-            "is_error": result.is_error.unwrap_or(false)
-        });
+        // Convert the tool result to a JSON Value - use serde_json to serialize the whole result
+        let final_result = serde_json::to_value(&result)
+            .context("failed to serialize tool result")?;
         
         if result.is_error.unwrap_or(false) {
             Logger::error(format!("Tool execution failed: {}", tool));
