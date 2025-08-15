@@ -195,7 +195,7 @@ impl McpExecutor {
         } else {
             Logger::success(format!("Tool '{}' executed successfully", tool));
         }
-        Logger::data(format!("Tool result: {}", final_result));
+        Logger::data(format!("Tool result: {}", serde_json::to_string_pretty(&final_result).unwrap_or_else(|_| final_result.to_string())));
         
         Ok(final_result)
     }
