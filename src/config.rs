@@ -1,4 +1,5 @@
 use std::env;
+use crate::logger::Logger;
 
 pub struct AppConfig {
     pub deepseek_api_key: String,
@@ -10,11 +11,21 @@ impl AppConfig {
     /// Load configuration from .env file and environment variables
     /// Environment variables take precedence over .env file values
     pub fn load() -> anyhow::Result<Self> {
+        Logger::config("Loading application configuration...");
+        
         // Load .env file if it exists (silently ignore if it doesn't exist)
-        let _ = dotenvy::dotenv();
+        match dotenvy::dotenv() {
+            Ok(_) => Logger::success("Loaded configuration from .env file"),
+            Err(_) => Logger::info("No .env file found, using environment variables only"),
+        }
         
         // Load from environment variables (which now includes values from .env file)
-        Self::from_env()
+        let config = Self::from_env()?;
+        Logger::success("Configuration loaded successfully");
+        Logger::info(format!("Using model: {}", config.model));
+        Logger::info(format!("IPLocate directory: {}", config.iplocate_dir));
+        
+        Ok(config)
     }
 
     /// Load configuration directly from environment variables only
