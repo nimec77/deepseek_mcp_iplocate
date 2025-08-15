@@ -49,7 +49,7 @@ impl McpExecutor {
     pub async fn connect_iplocate(iplocate_dir: &str) -> Result<Self> {
         // Create child process transport for the IPLocate MCP server
         let mut cmd = tokio::process::Command::new("node");
-        cmd.arg("build/index.js")
+        cmd.arg("dist/index.js")
            .current_dir(iplocate_dir);
         let transport = TokioChildProcess::new(&mut cmd)
             .context("create TokioChildProcess")?;

@@ -7,6 +7,17 @@ pub struct AppConfig {
 }
 
 impl AppConfig {
+    /// Load configuration from .env file and environment variables
+    /// Environment variables take precedence over .env file values
+    pub fn load() -> anyhow::Result<Self> {
+        // Load .env file if it exists (silently ignore if it doesn't exist)
+        let _ = dotenvy::dotenv();
+        
+        // Load from environment variables (which now includes values from .env file)
+        Self::from_env()
+    }
+
+    /// Load configuration directly from environment variables only
     pub fn from_env() -> anyhow::Result<Self> {
         Ok(Self {
             deepseek_api_key: env::var("DEEPSEEK_API_KEY")?,

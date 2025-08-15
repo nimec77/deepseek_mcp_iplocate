@@ -11,3 +11,4 @@ serde_json = "1"
 schemars = "0.8"
 deepseek-api = "0.1"
 rmcp = { version = "0.1", features = ["client", "transport-child-process"] }
+dotenvy = "0.15"

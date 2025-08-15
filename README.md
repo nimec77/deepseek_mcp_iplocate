@@ -58,12 +58,26 @@ npm install
 npm run build
 ```
 
-3. Set up environment variables:
+3. Set up configuration:
+
+**Option A: Using a .env file (recommended)**
+```bash
+# Create a .env file in the project root
+cat > .env << EOF
+DEEPSEEK_API_KEY=your-deepseek-api-key
+DEEPSEEK_MODEL=deepseek-chat
+IPLOCATE_DIR=/path/to/servers/src/iplocate
+EOF
+```
+
+**Option B: Using environment variables**
 ```bash
 export DEEPSEEK_API_KEY="your-deepseek-api-key"
 export DEEPSEEK_MODEL="deepseek-chat"  # or "deepseek-reasoner"
 export IPLOCATE_DIR="/path/to/servers/src/iplocate"
 ```
+
+Note: Environment variables take precedence over .env file values if both are set.
 
 4. Build and run:
 ```bash
@@ -109,7 +123,24 @@ let custom_queries = vec![
 
 ## Configuration
 
-The application uses environment variables for configuration:
+The application supports configuration through both `.env` files and environment variables. Environment variables take precedence over `.env` file values.
+
+### Using .env File (Recommended)
+
+Create a `.env` file in the project root directory:
+
+```bash
+# DeepSeek API Key (required)
+DEEPSEEK_API_KEY=your_deepseek_api_key_here
+
+# DeepSeek Model (optional, defaults to "deepseek-chat")
+DEEPSEEK_MODEL=deepseek-chat
+
+# IPLocate MCP Server Directory (optional, defaults to "./mcp-server-iplocate")
+IPLOCATE_DIR=./mcp-server-iplocate
+```
+
+### Configuration Variables
 
 | Variable | Description | Default Value | Required |
 |----------|-------------|---------------|----------|
@@ -146,7 +177,7 @@ src/
 impl McpExecutor {
     pub async fn connect_custom_server(server_dir: &str) -> Result<Self> {
         let mut cmd = tokio::process::Command::new("node");
-        cmd.arg("build/index.js")
+        cmd.arg("dist/index.js")
            .current_dir(server_dir);
         // ... connection logic
     }
