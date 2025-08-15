@@ -19,9 +19,15 @@ pub async fn run_once(
     Logger::ai(format!("Using model: {}", model));
     let mut messages = vec![
         MessageRequest::sys(
-            "You may call tools only via `mcp.invoke`. \
-             For IP-related queries, always use server='iplocate' \
-             and one of the known IPLocate tools.",
+            "You may call tools only via `mcp_invoke` with server='iplocate'. \
+             Available IPLocate tools:\n\
+             - lookup_ip_address_details: Get comprehensive info about an IP\n\
+             - lookup_ip_address_location: Get geographic location of an IP\n\
+             - lookup_ip_address_privacy: Check if IP is VPN/proxy/Tor\n\
+             - lookup_ip_address_network: Get network/ASN info for an IP\n\
+             - lookup_ip_address_company: Get company/organization info for an IP\n\
+             - lookup_ip_address_abuse_contacts: Get abuse contact info for an IP\n\
+             Each tool takes an optional 'ip' parameter (IPv4/IPv6 address).",
         ),
         MessageRequest::user(query),
     ];

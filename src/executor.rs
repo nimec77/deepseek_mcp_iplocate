@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use serde_json::Value;
+use std::time::Duration;
 use rmcp::{
     service::{RunningService, Peer},
     RoleClient, ClientHandler, ServiceExt,
@@ -71,25 +72,62 @@ impl McpExecutor {
             .context("failed to start MCP client service")?;
 
         Logger::success("Successfully connected to IPLocate MCP server");
+        
+        // Give the server more time to fully initialize
+        Logger::info("Waiting for server to fully initialize...");
+        tokio::time::sleep(Duration::from_secs(2)).await;
+        
         Ok(Self { service })
     }
 
     pub async fn list_tools(&self) -> Result<Vec<String>> {
         Logger::tool("Requesting available tools from IPLocate server...");
         
+        // Try to get tools from the server with a shorter timeout
         let params = PaginatedRequestParam::default();
-        let result = self.service.peer()
-            .list_tools(params)
-            .await
-            .context("failed to list tools")?;
+        let timeout_duration = Duration::from_secs(5);
         
-        let tool_names: Vec<String> = result.tools.into_iter().map(|t| t.name.to_string()).collect();
-        Logger::success(format!("Found {} available tools", tool_names.len()));
-        for tool in &tool_names {
+        match tokio::time::timeout(
+            timeout_duration,
+            self.service.peer().list_tools(params)
+        ).await {
+            Ok(Ok(result)) => {
+                let tool_names: Vec<String> = result.tools.into_iter().map(|t| t.name.to_string()).collect();
+                Logger::success(format!("Found {} available tools from server", tool_names.len()));
+                for tool in &tool_names {
+                    Logger::info(format!("  - {}", tool));
+                }
+                Ok(tool_names)
+            },
+            Ok(Err(e)) => {
+                Logger::warning(format!("Failed to get tools from server: {}", e));
+                self.get_fallback_tools()
+            },
+            Err(_) => {
+                Logger::warning("Server took too long to respond, using fallback tool list");
+                self.get_fallback_tools()
+            }
+        }
+    }
+    
+    fn get_fallback_tools(&self) -> Result<Vec<String>> {
+        // Based on our manual testing, we know these tools are available
+        let fallback_tools = vec![
+            "lookup_ip_address_details".to_string(),
+            "lookup_ip_address_location".to_string(),
+            "lookup_ip_address_privacy".to_string(),
+            "lookup_ip_address_network".to_string(),
+            "lookup_ip_address_company".to_string(),
+            "lookup_ip_address_abuse_contacts".to_string(),
+        ];
+        
+        Logger::info("Using fallback tool list based on known IPLocate server capabilities");
+        Logger::success(format!("Found {} available tools (fallback)", fallback_tools.len()));
+        for tool in &fallback_tools {
             Logger::info(format!("  - {}", tool));
         }
         
-        Ok(tool_names)
+        Ok(fallback_tools)
     }
 
     pub async fn execute(&self, tool: &str, args: Value) -> Result<Value> {
@@ -107,10 +145,16 @@ impl McpExecutor {
         };
         
         Logger::network("Sending tool call request to IPLocate server...");
-        let result = self.service.peer()
-            .call_tool(params)
-            .await
-            .context("failed to call tool")?;
+        
+        // Add a timeout to prevent indefinite hanging
+        let timeout_duration = Duration::from_secs(60); // Longer timeout for tool execution
+        let result = tokio::time::timeout(
+            timeout_duration,
+            self.service.peer().call_tool(params)
+        )
+        .await
+        .context("timeout while executing tool on MCP server")?
+        .context("failed to call tool")?;
             
         // Convert the tool result to a JSON Value
         let content_value = result.content.into_iter()

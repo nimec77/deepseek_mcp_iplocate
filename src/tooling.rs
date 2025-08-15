@@ -24,7 +24,7 @@ pub fn mcp_invoke_tool() -> anyhow::Result<ToolObject> {
     Ok(ToolObject {
         tool_type: ToolType::Function,
         function: Function {
-            name: "mcp.invoke".to_string(),
+            name: "mcp_invoke".to_string(),
             description: "Invoke a tool on the IPLocate MCP server".to_string(),
             parameters,
         },
