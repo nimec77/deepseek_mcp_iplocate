@@ -30,7 +30,7 @@ async fn main() -> Result<()> {
     // Process queries
     Logger::section("Processing IP Queries");
     let queries = [
-        "Get full IP details for 8.8.8.8",
+        // "Get full IP details for 8.8.8.8",
         "Check if 1.1.1.1 is VPN, proxy, or Tor",
     ];
 

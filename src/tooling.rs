@@ -1,9 +1,8 @@
 use deepseek_api::request::{Function, ToolObject, ToolType};
-use schemars::schema::SchemaObject;
 use serde_json::json;
 
 pub fn mcp_invoke_tool() -> anyhow::Result<ToolObject> {
-    let parameters: SchemaObject = serde_json::from_value(json!({
+    let parameters = serde_json::from_value(json!({
         "type": "object",
         "required": ["server", "tool", "arguments"],
         "properties": {
