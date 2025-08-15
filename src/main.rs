@@ -1,8 +1,8 @@
 mod config;
-mod tooling;
 mod deepseek_client;
 mod executor;
 mod run;
+mod tooling;
 
 use anyhow::Result;
 use run::run_once;
@@ -13,7 +13,10 @@ async fn main() -> Result<()> {
     let client = deepseek_client::build_client(cfg.deepseek_api_key)?;
     let executor = executor::McpExecutor::connect_iplocate(&cfg.iplocate_dir).await?;
 
-    println!("Available IPLocate tools: {:?}", executor.list_tools().await?);
+    println!(
+        "Available IPLocate tools: {:?}",
+        executor.list_tools().await?
+    );
 
     let queries = vec![
         "Get full IP details for 8.8.8.8",

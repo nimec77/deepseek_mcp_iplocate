@@ -1,8 +1,8 @@
 use anyhow::Result;
 use deepseek_api::{
-    CompletionsRequestBuilder,
+    CompletionsRequestBuilder, RequestBuilder,
     request::{MessageRequest, ToolMessageRequest},
-    response::FinishReason,
+    response::{FinishReason, ModelType},
 };
 use serde_json::{Value, json};
 
@@ -15,7 +15,7 @@ pub async fn run_once(
     executor: &McpExecutor,
 ) -> Result<Option<String>> {
     let mut messages = vec![
-        MessageRequest::system(
+        MessageRequest::sys(
             "You may call tools only via `mcp.invoke`. \
              For IP-related queries, always use server='iplocate' \
              and one of the known IPLocate tools.",
@@ -25,8 +25,14 @@ pub async fn run_once(
 
     let tools = vec![mcp_invoke_tool()?];
 
+    let model_type = match model {
+        "deepseek-chat" => ModelType::DeepSeekChat,
+        "deepseek-reasoner" => ModelType::DeepSeekReasoner,
+        _ => ModelType::DeepSeekChat, // Default to DeepSeekChat for unknown models
+    };
+    
     let first = CompletionsRequestBuilder::new(&messages)
-        .model(model)
+        .use_model(model_type.clone())
         .tools(&tools)
         .do_request(client)
         .await?
@@ -45,7 +51,7 @@ pub async fn run_once(
 
         for call in tool_calls {
             let args: Value = serde_json::from_str(&call.function.arguments).unwrap_or(json!({}));
-            let server = args
+            let _server = args
                 .get("server")
                 .and_then(|v| v.as_str())
                 .unwrap_or("iplocate");
@@ -63,7 +69,7 @@ pub async fn run_once(
         }
 
         let final_resp = CompletionsRequestBuilder::new(&messages)
-            .model(model)
+            .use_model(model_type)
             .tools(&tools)
             .do_request(client)
             .await?
