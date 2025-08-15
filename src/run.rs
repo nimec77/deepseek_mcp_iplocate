@@ -6,7 +6,7 @@ use deepseek_api::{
 };
 use serde_json::{Value, json};
 
-use crate::{executor::McpExecutor, tooling::mcp_invoke_tool, logger::Logger};
+use crate::{executor::McpExecutor, logger::Logger, tooling::mcp_invoke_tool};
 
 pub async fn run_once(
     client: &deepseek_api::DeepSeekClient,
@@ -39,7 +39,7 @@ pub async fn run_once(
         "deepseek-reasoner" => ModelType::DeepSeekReasoner,
         _ => ModelType::DeepSeekChat, // Default to DeepSeekChat for unknown models
     };
-    
+
     Logger::ai("Sending initial request to DeepSeek API...");
     let first = CompletionsRequestBuilder::new(&messages)
         .use_model(model_type.clone())
@@ -47,7 +47,7 @@ pub async fn run_once(
         .do_request(client)
         .await?
         .must_response();
-    
+
     Logger::success("Received response from DeepSeek API");
 
     let choice = &first.choices[0];
@@ -66,7 +66,12 @@ pub async fn run_once(
         messages.push(MessageRequest::Assistant(assistant_msg.clone()));
 
         for (i, call) in tool_calls.iter().enumerate() {
-            Logger::tool(format!("Executing tool call {}/{}: {}", i + 1, tool_calls.len(), call.function.name));
+            Logger::tool(format!(
+                "Executing tool call {}/{}: {}",
+                i + 1,
+                tool_calls.len(),
+                call.function.name
+            ));
             let args: Value = serde_json::from_str(&call.function.arguments).unwrap_or(json!({}));
             let _server = args
                 .get("server")
@@ -98,7 +103,7 @@ pub async fn run_once(
             .message
             .as_ref()
             .map(|m| m.content.clone());
-        
+
         Logger::operation_complete("Query processing completed with tool calls");
         return Ok(response_content);
     }

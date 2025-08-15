@@ -72,7 +72,11 @@ impl Logger {
 
     /// Log results in bright yellow with formatting
     pub fn result<T: Display>(label: T, content: &str) {
-        println!("📋 {} {}", label.to_string().bright_yellow().bold(), "=".repeat(50).dimmed());
+        println!(
+            "📋 {} {}",
+            label.to_string().bright_yellow().bold(),
+            "=".repeat(50).dimmed()
+        );
         println!("{}", content.white());
         println!("{}", "=".repeat(60).dimmed());
     }
